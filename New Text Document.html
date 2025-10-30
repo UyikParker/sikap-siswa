@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catatan Sikap Siswa SMP</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menggunakan font Inter untuk tampilan yang lebih modern dan bersih */
+        :root {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style untuk container utama agar selalu mengisi tinggi layar */
+        .app-container {
+            min-height: 100vh;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    // Menggunakan warna biru muda/cyan untuk tema lembut
+                    colors: {
+                        'primary': {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            600: '#0284c7', // Warna utama tombol
+                            700: '#0369a1', // Warna hover tombol
+                            800: '#075985', // Warna teks utama
+                        },
+                        'soft-bg': '#f0f9ff', // Background lembut
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-soft-bg text-primary-800">
+
+    <div id="app" class="app-container max-w-lg mx-auto p-4 md:p-6 shadow-xl bg-white">
+
+        <!-- Header -->
+        <header class="text-center mb-6 py-4 border-b border-primary-100">
+            <h1 class="text-2xl md:text-3xl font-bold text-primary-600">Catatan Sikap Siswa</h1>
+            <p class="text-sm text-primary-700">Untuk Guru SMP (Daerah Pertanian)</p>
+        </header>
+
+        <!-- Toast Notification Area -->
+        <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+
+        <!-- Form Pencatatan Sikap -->
+        <section id="input-form" class="mb-8 p-4 bg-primary-50 rounded-xl shadow-lg">
+            <h2 class="text-xl font-semibold mb-4 text-primary-700 border-b pb-2">Input Sikap Baru</h2>
+            
+            <form id="attitude-form" class="space-y-4">
+                
+                <!-- Tanggal dan Kelas (Otomatis/Tetap) -->
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-primary-800">Tanggal</label>
+                        <input type="text" id="input-date" readonly class="mt-1 block w-full rounded-lg border-primary-100 shadow-sm p-3 bg-white text-gray-500 cursor-not-allowed">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-primary-800">Kelas</label>
+                        <!-- Kelas diisi otomatis berdasarkan nama, namun di sini kita tetapkan 7A untuk contoh -->
+                        <input type="text" id="input-class" value="7A" readonly class="mt-1 block w-full rounded-lg border-primary-100 shadow-sm p-3 bg-white text-gray-500 cursor-not-allowed">
+                    </div>
+                </div>
+
+                <!-- Nama Siswa (Dropdown) -->
+                <div>
+                    <label for="input-name" class="block text-sm font-medium text-primary-800">Nama Siswa <span class="text-red-500">*</span></label>
+                    <select id="input-name" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 bg-white focus:ring-primary-600 focus:border-primary-600 transition duration-150 ease-in-out">
+                        <!-- Options akan diisi oleh JS -->
+                    </select>
+                </div>
+
+                <!-- Jenis Sikap (Dropdown) -->
+                <div>
+                    <label for="input-type" class="block text-sm font-medium text-primary-800">Jenis Sikap <span class="text-red-500">*</span></label>
+                    <select id="input-type" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 bg-white focus:ring-primary-600 focus:border-primary-600 transition duration-150 ease-in-out">
+                        <!-- Options akan diisi oleh JS -->
+                    </select>
+                </div>
+
+                <!-- Kategori (Radio Button) -->
+                <div>
+                    <label class="block text-sm font-medium text-primary-800 mb-2">Kategori <span class="text-red-500">*</span></label>
+                    <div class="flex space-x-6">
+                        <div class="flex items-center">
+                            <input id="cat-positif" name="category" type="radio" value="Positif" required class="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500">
+                            <label for="cat-positif" class="ml-2 block text-sm font-medium text-green-700">Positif</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="cat-negatif" name="category" type="radio" value="Negatif" required class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500">
+                            <label for="cat-negatif" class="ml-2 block text-sm font-medium text-red-700">Negatif</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Catatan Tambahan (Textarea) -->
+                <div>
+                    <label for="input-notes" class="block text-sm font-medium text-primary-800">Catatan Tambahan (Opsional)</label>
+                    <textarea id="input-notes" rows="3" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 bg-white focus:ring-primary-600 focus:border-primary-600 transition duration-150 ease-in-out"></textarea>
+                </div>
+
+                <!-- Tombol Kirim -->
+                <button type="submit" id="submit-button" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 transition duration-150 ease-in-out">
+                    Kirim Catatan ke Spreadsheet
+                </button>
+            </form>
+        </section>
+
+        <!-- Bagian Tampilan Data -->
+        <section id="data-display" class="p-4 bg-white rounded-xl shadow-lg">
+            <h2 class="text-xl font-semibold mb-4 text-primary-700 border-b pb-2">Daftar Entri Terakhir</h2>
+
+            <!-- Search/Filter Input -->
+            <div class="mb-4">
+                <input type="text" id="search-name" placeholder="Cari berdasarkan Nama Siswa..." 
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 bg-white focus:ring-primary-600 focus:border-primary-600 transition duration-150 ease-in-out">
+            </div>
+
+            <!-- Daftar Entri -->
+            <div id="entries-list" class="space-y-4">
+                <p id="empty-message" class="text-gray-500 text-center py-4">Belum ada data yang dikirim di sesi ini.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal/Popup untuk Pengaturan Link Apps Script -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 class="text-lg font-bold mb-4 text-primary-700">Pengaturan Apps Script URL</h3>
+            <p class="text-sm text-gray-600 mb-4">Ubah URL di bawah ini sesuai dengan link Deploy Apps Script Anda.</p>
+            <input type="url" id="apps-script-url-input" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 focus:ring-primary-600 focus:border-primary-600" placeholder="https://script.google.com/macros/s/..." required>
+            <div class="flex justify-end space-x-2 mt-4">
+                <button id="close-modal-button" class="py-2 px-4 rounded-lg text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300">Tutup</button>
+                <button id="save-url-button" class="py-2 px-4 rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700">Simpan</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tombol Floating untuk Settings -->
+    <button id="open-settings-button" class="fixed bottom-4 right-4 bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-full shadow-xl transition duration-150 ease-in-out z-40">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.82 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.82 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.82-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.82-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    </button>
+    
+
+    <script>
+        // --- DATA KONSTAN DAN VARIABEL GLOBAL ---
+        
+        // Ganti URL ini dengan URL Google Apps Script Anda setelah di-deploy
+        // URL Apps Script sudah diubah sesuai permintaan Anda:
+        let APPS_SCRIPT_URL = localStorage.getItem('appsScriptUrl') || 'https://script.google.com/macros/s/AKfycby2CAar0euV3u2p6_eY8aPsunoEQm0UuprslPeR7v3dcG75skjYiEhTdLv-jFlOGSgybw/exec';
+        
+        const ATTITUDE_TYPES = [
+            "Disiplin", 
+            "Kerjasama", 
+            "Tanggung Jawab", 
+            "Santun", 
+            "Percaya Diri", 
+            "Toleransi"
+        ];
+
+        // Contoh Data Siswa (Kelas 7A)
+        const studentData = [
+            { name: "Rani", class: "7A" },
+            { name: "Dika", class: "7A" },
+            { name: "Putri", class: "7A" },
+            { name: "Arif", class: "7A" },
+            { name: "Fajar", class: "7A" },
+            { name: "Siti", class: "7A" },
+            { name: "Bagus", class: "7A" },
+            { name: "Kusuma", class: "7A" },
+            { name: "Joko", class: "7A" },
+        ];
+        
+        // Untuk menyimpan data entri yang berhasil dikirim di sesi saat ini
+        let submittedEntries = [];
+        
+        // --- UTILITY FUNCTIONS ---
+
+        /** Menampilkan notifikasi Toast */
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgColor = '';
+            let icon = '';
+
+            if (type === 'success') {
+                bgColor = 'bg-green-500';
+                icon = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else if (type === 'error') {
+                bgColor = 'bg-red-500';
+                icon = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else if (type === 'info') {
+                bgColor = 'bg-blue-500';
+                icon = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg mb-2 flex items-center transition-opacity duration-300`;
+            toast.innerHTML = icon + message;
+            
+            container.prepend(toast);
+
+            // Hilangkan toast setelah 4 detik
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 4000);
+        }
+
+        /** Memformat tanggal YYYY-MM-DD */
+        function formatDate(date) {
+            const d = new Date(date);
+            let month = '' + (d.getMonth() + 1);
+            let day = '' + d.getDate();
+            const year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        }
+
+        /** Mengambil tanggal hari ini dan menampilkannya di form */
+        function setTodayDate() {
+            document.getElementById('input-date').value = formatDate(new Date());
+        }
+
+        /** Mengisi dropdown Nama Siswa dan Jenis Sikap */
+        function populateFormOptions() {
+            // Nama Siswa
+            const nameSelect = document.getElementById('input-name');
+            nameSelect.innerHTML = '<option value="" disabled selected>Pilih Siswa...</option>';
+            studentData.sort((a, b) => a.name.localeCompare(b.name)).forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.name;
+                option.textContent = `${student.name} (${student.class})`;
+                nameSelect.appendChild(option);
+            });
+
+            // Jenis Sikap
+            const typeSelect = document.getElementById('input-type');
+            typeSelect.innerHTML = '<option value="" disabled selected>Pilih Jenis Sikap...</option>';
+            ATTITUDE_TYPES.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeSelect.appendChild(option);
+            });
+        }
+
+        // --- DISPLAY DATA FUNCTIONS ---
+
+        /** Membuat elemen kartu untuk satu entri sikap */
+        function createEntryCard(entry) {
+            const isNegative = entry.category === 'Negatif';
+            const colorClass = isNegative ? 'border-red-400 bg-red-50' : 'border-green-400 bg-green-50';
+            const textClass = isNegative ? 'text-red-700' : 'text-green-700';
+
+            const card = document.createElement('div');
+            card.className = `p-4 border-l-4 ${colorClass} rounded-lg shadow-sm transition duration-150 ease-in-out`;
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-lg font-bold ${textClass}">${entry.name}</span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${isNegative ? 'bg-red-200' : 'bg-green-200'} ${textClass}">${entry.category}</span>
+                </div>
+                <p class="text-sm text-gray-800 mb-1"><strong>Jenis:</strong> ${entry.type} (${entry.class})</p>
+                <p class="text-xs text-gray-500 mb-2"><strong>Tanggal:</strong> ${entry.date}</p>
+                ${entry.notes ? `<p class="text-sm italic text-gray-600 border-t pt-2 mt-2">"${entry.notes}"</p>` : `<p class="text-sm italic text-gray-500 border-t pt-2 mt-2">Tidak ada catatan tambahan.</p>`}
+            `;
+            return card;
+        }
+
+        /** Memperbarui daftar entri yang ditampilkan */
+        function updateEntriesList(filterName = '') {
+            const listContainer = document.getElementById('entries-list');
+            const emptyMessage = document.getElementById('empty-message');
+            listContainer.innerHTML = '';
+            
+            const filteredEntries = submittedEntries.filter(entry => 
+                entry.name.toLowerCase().includes(filterName.toLowerCase())
+            );
+
+            if (filteredEntries.length === 0) {
+                emptyMessage.textContent = filterName 
+                    ? `Tidak ada catatan untuk siswa bernama "${filterName}".`
+                    : 'Belum ada data yang dikirim di sesi ini.';
+                listContainer.appendChild(emptyMessage);
+                emptyMessage.classList.remove('hidden');
+            } else {
+                emptyMessage.classList.add('hidden');
+                filteredEntries.forEach(entry => {
+                    listContainer.appendChild(createEntryCard(entry));
+                });
+            }
+        }
+
+        // --- FIREBASE/FETCH INTEGRATION (APPS SCRIPT) ---
+
+        /** Mengirim data ke Google Apps Script */
+        async function sendDataToSheets(event) {
+            event.preventDefault();
+            
+            const submitButton = document.getElementById('submit-button');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Mengirim...';
+
+            // Cek apakah URL Apps Script masih default placeholder, meskipun sudah diisi
+            if (APPS_SCRIPT_URL.includes('PASTE_YOUR_APPS_SCRIPT_URL_HERE')) {
+                showToast('❌ Mohon atur URL Apps Script terlebih dahulu di menu Pengaturan (ikon gear) sebelum mengirim data.', 'error');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Kirim Catatan ke Spreadsheet';
+                return;
+            }
+
+            const formData = {
+                date: document.getElementById('input-date').value,
+                name: document.getElementById('input-name').value,
+                class: document.getElementById('input-class').value,
+                type: document.getElementById('input-type').value,
+                category: document.querySelector('input[name="category"]:checked').value,
+                notes: document.getElementById('input-notes').value || '-',
+                timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+            };
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        showToast(`✅ Data sikap untuk ${formData.name} berhasil dikirim!`, 'success');
+                        
+                        // Tambahkan entri ke daftar lokal
+                        submittedEntries.unshift(formData);
+                        updateEntriesList();
+
+                        // Reset form, kecuali tanggal dan kelas
+                        document.getElementById('attitude-form').reset();
+                        setTodayDate();
+                        document.getElementById('input-name').value = ""; // Pastikan kembali ke "Pilih Siswa..."
+                        document.getElementById('input-type').value = ""; // Pastikan kembali ke "Pilih Jenis Sikap..."
+                    } else {
+                        showToast(`⚠️ Server merespon tapi ada masalah: ${result.message}`, 'error');
+                    }
+                } else {
+                    showToast(`❌ Gagal terhubung ke Apps Script (Status: ${response.status}). Cek URL dan Deploy!`, 'error');
+                }
+            } catch (error) {
+                console.error('Error saat mengirim data:', error);
+                showToast(`❌ Terjadi error jaringan/koneksi. ${error.message}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Kirim Catatan ke Spreadsheet';
+            }
+        }
+
+        // --- MODAL/SETTINGS FUNCTIONS ---
+        
+        function openSettingsModal() {
+            const urlInput = document.getElementById('apps-script-url-input');
+            urlInput.value = APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE' ? '' : APPS_SCRIPT_URL;
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function saveAppsScriptUrl() {
+            const urlInput = document.getElementById('apps-script-url-input').value.trim();
+            if (urlInput) {
+                APPS_SCRIPT_URL = urlInput;
+                localStorage.setItem('appsScriptUrl', urlInput);
+                showToast('✅ URL Apps Script berhasil disimpan.', 'success');
+                closeSettingsModal();
+            } else {
+                showToast('⚠️ URL tidak boleh kosong.', 'info');
+            }
+        }
+        
+        // --- EVENT LISTENERS AND INITIALIZATION ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inisialisasi: Mengatur tanggal hari ini
+            setTodayDate();
+
+            // Inisialisasi: Mengisi dropdown
+            populateFormOptions();
+
+            // Event Listener untuk Form Submission
+            document.getElementById('attitude-form').addEventListener('submit', sendDataToSheets);
+
+            // Event Listener untuk Search/Filter
+            document.getElementById('search-name').addEventListener('input', (e) => {
+                updateEntriesList(e.target.value);
+            });
+            
+            // Event Listeners untuk Modal Pengaturan
+            document.getElementById('open-settings-button').addEventListener('click', openSettingsModal);
+            document.getElementById('close-modal-button').addEventListener('click', closeSettingsModal);
+            document.getElementById('save-url-button').addEventListener('click', saveAppsScriptUrl);
+
+            // Tampilkan pesan info jika URL masih default (hanya jika user belum pernah menyimpannya)
+            // Karena kita sudah set default, pesan ini mungkin tidak akan muncul, kecuali user menghapus local storage
+            if (APPS_SCRIPT_URL.includes('PASTE_YOUR_APPS_SCRIPT_URL_HERE')) {
+                 showToast('ℹ️ Mohon atur URL Apps Script di menu Pengaturan (ikon gear) sebelum mengirim data.', 'info');
+            }
+
+            // Inisialisasi daftar entri
+            updateEntriesList();
+        });
+
+    </script>
+</body>
+</html>
